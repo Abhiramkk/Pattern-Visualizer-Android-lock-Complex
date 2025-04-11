@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Android Lock Pattern Visualizer</title>
+  <style>
+    :root {
+      --bg-color: #f0f0f0;
+      --canvas-bg: white;
+      --dot-color: #333;
+      --line-color: #0077cc;
+      --freehand-line-color: #cc4400;
+      --score-bg: rgba(0, 0, 0, 0.1);
+    }
+
+    body.dark {
+      --bg-color: #1e1e1e;
+      --canvas-bg: #2c2c2c;
+      --dot-color: #eee;
+      --line-color: #33bbff;
+      --freehand-line-color: #ffa733;
+      --score-bg: rgba(255, 255, 255, 0.1);
+    }
+
+    body {
+      font-family: sans-serif;
+      background: var(--bg-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+      transition: background 0.3s ease;
+    }
+
+    canvas {
+      background: var(--canvas-bg);
+      border: 2px solid var(--dot-color);
+      margin-top: 1rem;
+      touch-action: none;
+      transition: background 0.3s ease;
+    }
+
+    input, textarea, select {
+      padding: 0.5rem;
+      font-size: 1rem;
+      width: 300px;
+      margin-top: 0.5rem;
+    }
+
+    button {
+      margin: 0.5rem;
+      padding: 0.5rem 1rem;
+    }
+
+    .theme-toggle {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+    }
+
+    .score-box {
+      margin-top: 1rem;
+      padding: 1rem;
+      width: 300px;
+      background: var(--score-bg);
+      text-align: center;
+      font-weight: bold;
+      backdrop-filter: blur(6px);
+      filter: blur(6px);
+      transition: filter 0.3s ease;
+      cursor: pointer;
+    }
+
+    .score-box.revealed {
+      filter: blur(0);
+    }
+
+    #scoreDetails {
+      display: none;
+      margin-top: 1rem;
+      background: var(--score-bg);
+      padding: 1rem;
+      width: 300px;
+    }
+
+    #scoreDetails.visible {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" onclick="toggleTheme()">🌓 Toggle Theme</button>
+  <h1>🔒 Android Lock Pattern Visualizer</h1>
+  <p>Enter a pattern using numbers 1-9 (e.g., <code>2 9 4 3 8 6 5 1 7</code>) or draw one below!</p>
+
+  <div>
+    <input id="patternInput" type="text" value="2 9 4 3 8 6 5 1 7" />
+    <button onclick="drawPattern()">Draw</button>
+  </div>
+
+  <div>
+    <label for="presetPatterns">Or choose a max-complexity pattern:</label><br />
+    <select id="presetPatterns" onchange="loadPreset()">
+      <option value="">-- Select a Pattern --</option>
+    </select>
+  </div>
+
+  <canvas id="patternCanvas" width="300" height="300"></canvas>
+  <textarea id="outputString" readonly placeholder="Your drawn pattern will appear here..."></textarea>
+
+  <div class="score-box" id="securityBox" onclick="revealScore()">🔒 Security Score: [Click to reveal]</div>
+  <button onclick="showScoreDetails()">Show Insights & Improvements</button>
+  <div id="scoreDetails"></div>
+
+  <script>
+    const canvas = document.getElementById("patternCanvas");
+    const ctx = canvas.getContext("2d");
+    const radius = 10;
+    const positions = {
+      1: [0, 0], 2: [1, 0], 3: [2, 0],
+      4: [0, 1], 5: [1, 1], 6: [2, 1],
+      7: [0, 2], 8: [1, 2], 9: [2, 2],
+    };
+
+    const patterns = [
+      [2, 9, 4, 3, 8, 6, 5, 1, 7],
+      [1, 4, 9, 2, 6, 7, 8, 3, 5],
+      [1, 5, 3, 8, 2, 9, 4, 6, 7],
+      [4, 3, 8, 1, 6, 2, 5, 7, 9],
+      [7, 6, 5, 2, 4, 9, 1, 8, 3],
+    ];
+
+    function toggleTheme() {
+      document.body.classList.toggle("dark");
+    }
+
+    function drawPattern() {
+      const pattern = document.getElementById("patternInput").value.trim().split(/\s+/).map(Number);
+      renderPattern(pattern);
+      document.getElementById("outputString").value = pattern.join(" ");
+      showSecurityScore(pattern);
+    }
+
+    function loadPreset() {
+      const selected = document.getElementById("presetPatterns").value;
+      if (selected) {
+        document.getElementById("patternInput").value = selected;
+        drawPattern();
+      }
+    }
+
+    function renderPattern(pattern) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const spacing = canvas.width / 3;
+      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue("--dot-color");
+
+      for (let i = 1; i <= 9; i++) {
+        const [x, y] = positions[i];
+        ctx.beginPath();
+        ctx.arc(x * spacing + spacing / 2, y * spacing + spacing / 2, radius, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+
+      ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue("--line-color");
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+
+      pattern.forEach((dot, index) => {
+        const [x, y] = positions[dot];
+        const posX = x * spacing + spacing / 2;
+        const posY = y * spacing + spacing / 2;
+        if (index === 0) ctx.moveTo(posX, posY);
+        else ctx.lineTo(posX, posY);
+      });
+
+      ctx.stroke();
+    }
+
+    function revealScore() {
+      document.getElementById("securityBox").classList.add("revealed");
+    }
+
+    function showScoreDetails() {
+      const pattern = document.getElementById("patternInput").value.trim().split(/\s+/).map(Number);
+      const score = getSecurityScore(pattern);
+      let table = `<h3>Pattern Analysis</h3><table border='1' style='width:100%;text-align:left;'>`;
+      for (const [k, v] of Object.entries(score.details)) {
+        table += `<tr><td><strong>${k}</strong></td><td>${v}</td></tr>`;
+      }
+      table += '</table>';
+      document.getElementById('scoreDetails').innerHTML = table;
+      document.getElementById('scoreDetails').classList.add('visible');
+    }
+
+    function showSecurityScore(pattern) {
+      const score = getSecurityScore(pattern);
+      document.getElementById("securityBox").textContent = `🔒 Security Score: ${score.grade} (${score.reason})`;
+    }
+
+    function getSecurityScore(pattern) {
+      const len = pattern.length;
+      const unique = new Set(pattern).size;
+      let directions = new Set();
+      let lShaped = false;
+      let totalDist = 0;
+
+      for (let i = 1; i < pattern.length; i++) {
+        const [x1, y1] = positions[pattern[i - 1]];
+        const [x2, y2] = positions[pattern[i]];
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+
+        const angle = Math.atan2(dy, dx);
+        directions.add(Math.round(angle * 100) / 100);
+
+        if ((Math.abs(dx) === 2 && Math.abs(dy) === 1) || (Math.abs(dx) === 1 && Math.abs(dy) === 2)) {
+          lShaped = true;
+        }
+
+        totalDist += Math.hypot(dx, dy);
+      }
+
+      let score = 0;
+      if (len === 9 && unique === 9) score += 2;
+      if (directions.size >= 6) score += 2;
+      if (lShaped) score += 1;
+      if (totalDist > 10) score += 1;
+
+      let grade = "F", reason = "Very weak";
+      if (score >= 6) { grade = "S"; reason = "Extremely strong pattern"; }
+      else if (score === 5) { grade = "A"; reason = "Very strong and complex"; }
+      else if (score === 4) { grade = "B"; reason = "Strong with some complexity"; }
+      else if (score === 3) { grade = "C"; reason = "Moderate, can be guessed"; }
+      else if (score === 2) { grade = "D"; reason = "Too short or simple"; }
+      else if (score === 1) { grade = "E"; reason = "Weak and predictable"; }
+
+      return {
+        grade, reason,
+        details: {
+          Length: len,
+          UniquePoints: unique,
+          Directions: directions.size,
+          LShapedMove: lShaped ? "Yes" : "No",
+          Distance: totalDist.toFixed(2),
+          Improvements: score >= 6 ? "None needed" : "Try adding more direction changes, unique points, and L-shapes"
+        }
+      };
+    }
+
+    // Load preset patterns into the dropdown
+    window.onload = () => {
+      const dropdown = document.getElementById("presetPatterns");
+      patterns.forEach(p => {
+        const option = document.createElement("option");
+        option.value = p.join(" ");
+        option.text = p.join(" ");
+        dropdown.appendChild(option);
+      });
+    };
+  </script>
+</body>
+</html>
